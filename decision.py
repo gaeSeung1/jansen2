@@ -17,7 +17,7 @@ def first_nonzero(arr, axis, invalid_val=-1):
     mask = arr!=0
     return np.where(mask.any(axis=axis), mask.argmax(axis=axis), invalid_val)
     
-def set_path3(image, forward_criteria):
+def set_path3(image):
     height, width = image.shape
     height = height-1
     width = width-1
@@ -64,19 +64,32 @@ def set_path3(image, forward_criteria):
         #기울기 표시
         direction = ((int(width/2),height),(int(width/2)-int(forward*m),height-forward))
 
-        #방향 결정
-        if forward < 20 or forward < 50 and abs(m) < 0.35:
+        #-------------방향 결정-----------
+        #backward
+        if forward < 20 or forward < 50 and abs(m) < 0.25:
             action = 'x'
-        elif abs(m) < forward_criteria:
+        #forward
+        elif abs(m) < 0.25:
             action = 'w'
+        #spin left
+        elif forward < 30 and m > 0:
+            action = 'a'
+        #spin right
+        elif forward < 30 and m < 0:
+            action = 'd'   
+
+        #left
         elif m > 0:
-            action = 'q'
+            action = 'w'
+        #right
         else:
-            action = 'e'
+            action = 'w'
+
+    #backward
     except:
         action = 'x'
         m = 0
-    
+
     return action, round(m,4), forward, left_line, right_line, center, direction
 
 

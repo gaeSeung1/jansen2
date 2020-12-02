@@ -3,7 +3,7 @@ host = 'gaeseung.local'
 #host = 'localhost'
 
 # 0 : main, 1 : main+streaming
-switch = 1
+switch = 0
 
 # import the necessary packages
 from picamera.array import PiRGBArray
@@ -49,10 +49,10 @@ GPIO.setup(GPIO_ECHO,GPIO.IN)
 GPIO.output(GPIO_TRIGGER, False)
 
 #motor action init
-speed = 50
-HALF=0.2
+#speed = 50
+HALF=0
 MOTOR_SPEEDS = {
-    "q": (HALF, 1), "w": (1, 1), "e": (1, HALF),
+    "q": (1, 1), "w": (1, 1), "e": (1, 1),
     "a": (-1, 1), "s": (0, 0), "d": (1, -1),
     "z": (-HALF, -1), "x": (-1, -1), "c": (-1, -HALF),
 }
@@ -103,9 +103,50 @@ def UploadNumpy(img):
     })
     res = conn.getresponse()
 
-def motor(action):
-    pw1 = speed * MOTOR_SPEEDS[action][0]
-    pw2 = speed * MOTOR_SPEEDS[action][1]
+def motor(action, m):
+
+    if action == 's':
+        direction = 'stop'
+        speed = 0
+        pw1 = min(speed * MOTOR_SPEEDS[action][0], 100)
+        pw2 = min(speed * MOTOR_SPEEDS[action][1], 100)
+
+    elif action == 'q':
+        direction = 'left'
+        speed = 50
+        pw1 = max(speed * MOTOR_SPEEDS[action][1] - abs(m)*30, -100)
+        pw2 = min(speed * MOTOR_SPEEDS[action][0] + abs(m)*50, 100)
+        
+    elif action == 'e':
+        direction = 'right'
+        speed = 50
+        pw1 = min(speed * MOTOR_SPEEDS[action][0] + abs(m)*50, 100)
+        pw2 = max(speed * MOTOR_SPEEDS[action][1] - abs(m)*30, -100)
+
+    elif action == 'a':
+        direction = 'spin left'
+        speed = 50
+        pw1 = min(speed * MOTOR_SPEEDS[action][0], 100)
+        pw2 = min(speed * MOTOR_SPEEDS[action][1], 100)
+
+    elif action == 'd':
+        direction = 'spin right'
+        speed = 50
+        pw1 = min(speed * MOTOR_SPEEDS[action][0], 100)
+        pw2 = min(speed * MOTOR_SPEEDS[action][1], 100)
+
+    elif action == 'w':
+        direction = 'forward'
+        speed = 50
+        pw1 = min(speed * MOTOR_SPEEDS[action][0], 100)
+        pw2 = min(speed * MOTOR_SPEEDS[action][1], 100)
+
+    elif action == 'x':
+        direction = 'backward'
+        speed = 40
+        pw1 = min(speed * MOTOR_SPEEDS[action][0], 100)
+        pw2 = min(speed * MOTOR_SPEEDS[action][1], 100)
+
     if pw1>0:
         GPIO.output(motor11,GPIO.HIGH)
         GPIO.output(motor12,GPIO.LOW)
@@ -126,21 +167,7 @@ def motor(action):
         GPIO.output(motor22,GPIO.LOW)
     p1.ChangeDutyCycle(abs(pw1))
     p2.ChangeDutyCycle(abs(pw2))
-
-    if action == 's':
-        direction = 'stop'
-    elif action == 'q':
-        direction = 'left'
-    elif action == 'e':
-        direction = 'right'
-    elif action == 'a':
-        direction = 'spin left'
-    elif action == 'd':
-        direction = 'spin right'
-    elif action == 'w':
-        direction = 'forward'
-    elif action == 'x':
-        direction = 'backward'
+    print(pw1,pw2)
     return direction
     
 def ultrasonic():
@@ -184,7 +211,7 @@ def main(q):
 
         #decision (action, round(m,4), forward, left_line, right_line, center, direction)
         masked_image=select_white(undistorted_image,160)
-        result=set_path3(masked_image,0.25)
+        result=set_path3(masked_image)
 
         #line marker
         line = []
@@ -206,31 +233,37 @@ def main(q):
         except:
             pass    
         #decision motor
-        direction = motor(result[0])
+        direction = motor(result[0], result[1])
+        if result[0] == 'a' or result[0] == 'd':
+            time.sleep(0.5)
+        print(result[2])
         
+        #e-stop
+        if result[2] > 230:
+            motor('s',0)
 #----------------------------
 
         #ultrasonic
         ultra = ultrasonic()
-        if ultra > 0 and ultra < 10:
+        if ultra > 0 and ultra < 12:
             #print('stop')
-            direction = motor('s')
+            direction = motor('s',0)
             print(ultra)
 
         #cascade
-        cas = len(cascade(undistorted_image))
-        if cas != 0:
-            direction = motor('s')
+#        cas = len(cascade(undistorted_image))
+#        if cas != 0:
+#            direction = motor('s')
             
         #AR marker
         markers = ar_markers.detect_markers(undistorted_image)
         for marker in markers:
             if marker.id == 114:
-                direction = motor('q')
+                direction = motor('q',result[1])
             elif marker.id == 922:
-                direction = motor('e')
+                direction = motor('e',result[1])
             elif marker.id == 2537:
-                direction = motor('s')               
+                direction = motor('s',0)               
             marker.highlite_marker(undistorted_image)
 #----------------------------
         #putText
