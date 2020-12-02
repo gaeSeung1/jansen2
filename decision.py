@@ -66,7 +66,7 @@ def set_path3(image):
 
         #-------------방향 결정-----------
         #backward
-        if forward < 20 or forward < 50 and abs(m) < 0.25:
+        if forward < 20 or forward < 50 and abs(m) < 0.2:
             action = 'x'
         #forward
         elif abs(m) < 0.25:
