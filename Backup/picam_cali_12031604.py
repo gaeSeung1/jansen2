@@ -50,11 +50,11 @@ GPIO.output(GPIO_TRIGGER, False)
 
 #motor action init
 #speed = 50
-
+HALF=0
 MOTOR_SPEEDS = {
-    "q": (0, 1), "w": (1, 1), "e": (1, 0),
+    "q": (1, 1), "w": (1, 1), "e": (1, 1),
     "a": (-1, 1), "s": (0, 0), "d": (1, -1),
-    "z": (0, -1), "x": (-1, -1), "c": (-1, 0),
+    "z": (-HALF, -1), "x": (-1, -1), "c": (-1, -HALF),
 }
 
 # socket HTTPConnection
@@ -114,21 +114,21 @@ def motor(action, m):
     elif action == 'q':
         direction = 'left'
         speed = 50
-        pw1 = min(speed * MOTOR_SPEEDS[action][0], 100)
-        pw2 = min(speed * MOTOR_SPEEDS[action][1], 100)
+        pw1 = max(speed * MOTOR_SPEEDS[action][1] - abs(m)*30, -100)
+        pw2 = min(speed * MOTOR_SPEEDS[action][0] + abs(m)*50, 100)
         
     elif action == 'e':
         direction = 'right'
         speed = 50
-        pw1 = min(speed * MOTOR_SPEEDS[action][0], 100)
-        pw2 = min(speed * MOTOR_SPEEDS[action][1], 100)
+        pw1 = min(speed * MOTOR_SPEEDS[action][0] + abs(m)*50, 100)
+        pw2 = max(speed * MOTOR_SPEEDS[action][1] - abs(m)*30, -100)
 
     elif action == 'a':
         direction = 'spin left'
         speed = 70
         pw1 = min(speed * MOTOR_SPEEDS[action][0], 100)
         pw2 = min(speed * MOTOR_SPEEDS[action][1], 100)
-        
+
     elif action == 'd':
         direction = 'spin right'
         speed = 70
@@ -167,7 +167,6 @@ def motor(action, m):
         GPIO.output(motor22,GPIO.LOW)
     p1.ChangeDutyCycle(abs(pw1))
     p2.ChangeDutyCycle(abs(pw2))
-
     print(pw1,pw2)
     return direction
     
@@ -215,43 +214,33 @@ def main(q):
         result=set_path3(masked_image)
 
         #line marker
-        line_left = []
-        line_right = []
+        line = []
+        #right        
         for j in range(result[2]):
-            #left
-            left_coord = (result[5]+1-result[4][j], 239-j)
-            line_left.append(left_coord)
+            left_coord = (+result[5]+1+result[3][j], 239-j)
+            line.append(left_coord)
             undistorted_image = cv2.line(undistorted_image, left_coord, left_coord,(0,255,0), 4)
-            #right
-            right_coord = (+result[5]+1+result[3][j], 239-j)
-            line_right.append(right_coord)
+        
+        #left
+        for j in range(result[2]):
+            right_coord = (result[5]+1-result[4][j], 239-j)
+            line.append(right_coord)
             undistorted_image = cv2.line(undistorted_image, right_coord, right_coord,(0,255,0), 4)
-
+        
         #slope
         try:
             undistorted_image = cv2.line(undistorted_image, result[6][0], result[6][1],(0,0,255), 4)
         except:
             pass    
         #decision motor
+        direction = motor(result[0], result[1])
+        if result[0] == 'a' or result[0] == 'd':
+            time.sleep(0.5)
+        print(result[2])
         
-        #straight
-        if result[0] == 'w' and line_left != [] and line_right != []:
-            straight_factor = 30
-            if line_left[0][0] > straight_factor:
-                result_direction = 'e'
-            elif line_right[0][0] < 320-straight_factor:
-                result_direction = 'q'
-            else:
-                result_direction = result[0]      
-            print(line_left[0][0])
-            print(line_right[0][0])
-        
-        else:
-            result_direction = result[0]
-
-        direction = motor(result_direction, result[1])
-        #print(result[2])
-    
+        #e-stop
+        if result[2] > 230:
+            motor('s',0)
 #----------------------------
 
         #ultrasonic
