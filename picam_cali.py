@@ -49,8 +49,6 @@ GPIO.setup(GPIO_ECHO,GPIO.IN)
 GPIO.output(GPIO_TRIGGER, False)
 
 #motor action init
-#speed = 50
-
 MOTOR_SPEEDS = {
     "q": (0, 1), "w": (1, 1), "e": (1, 0),
     "a": (-1, 1), "s": (0, 0), "d": (1, -1),
@@ -104,48 +102,36 @@ def UploadNumpy(img):
     res = conn.getresponse()
 
 def motor(action, m):
-
     if action == 's':
         direction = 'stop'
         speed = 0
-        pw1 = min(speed * MOTOR_SPEEDS[action][0], 100)
-        pw2 = min(speed * MOTOR_SPEEDS[action][1], 100)
 
     elif action == 'q':
         direction = 'left'
         speed = 50
-        pw1 = min(speed * MOTOR_SPEEDS[action][0], 100)
-        pw2 = min(speed * MOTOR_SPEEDS[action][1], 100)
         
     elif action == 'e':
         direction = 'right'
         speed = 50
-        pw1 = min(speed * MOTOR_SPEEDS[action][0], 100)
-        pw2 = min(speed * MOTOR_SPEEDS[action][1], 100)
 
     elif action == 'a':
         direction = 'spin left'
         speed = 70
-        pw1 = min(speed * MOTOR_SPEEDS[action][0], 100)
-        pw2 = min(speed * MOTOR_SPEEDS[action][1], 100)
         
     elif action == 'd':
         direction = 'spin right'
         speed = 70
-        pw1 = min(speed * MOTOR_SPEEDS[action][0], 100)
-        pw2 = min(speed * MOTOR_SPEEDS[action][1], 100)
 
     elif action == 'w':
         direction = 'forward'
         speed = 50
-        pw1 = min(speed * MOTOR_SPEEDS[action][0], 100)
-        pw2 = min(speed * MOTOR_SPEEDS[action][1], 100)
 
     elif action == 'x':
         direction = 'backward'
         speed = 40
-        pw1 = min(speed * MOTOR_SPEEDS[action][0], 100)
-        pw2 = min(speed * MOTOR_SPEEDS[action][1], 100)
+
+    pw1 = min(speed * MOTOR_SPEEDS[action][0], 100)
+    pw2 = min(speed * MOTOR_SPEEDS[action][1], 100)
 
     if pw1>0:
         GPIO.output(motor11,GPIO.HIGH)
@@ -168,7 +154,7 @@ def motor(action, m):
     p1.ChangeDutyCycle(abs(pw1))
     p2.ChangeDutyCycle(abs(pw2))
 
-    print(pw1,pw2)
+    #print(pw1,pw2)
     return direction
     
 def ultrasonic():
@@ -207,7 +193,6 @@ def main(q):
         #undistort
         undistorted_image = undistort(image)
 
-
 #--------------motor control--------------
 
         #decision (action, round(m,4), forward, left_line, right_line, center, direction)
@@ -232,8 +217,7 @@ def main(q):
             undistorted_image = cv2.line(undistorted_image, result[6][0], result[6][1],(0,0,255), 4)
         except:
             pass    
-        #decision motor
-        
+
         #straight
         if result[0] == 'w' and line_left != [] and line_right != []:
             straight_factor = 30
@@ -244,13 +228,12 @@ def main(q):
             else:
                 result_direction = result[0]      
             print(line_left[0][0])
-            print(line_right[0][0])
-        
+            print(line_right[0][0])        
         else:
             result_direction = result[0]
 
+        #motor ON!
         direction = motor(result_direction, result[1])
-        #print(result[2])
     
 #----------------------------
 

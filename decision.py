@@ -50,6 +50,7 @@ def set_path3(image):
         #가운데 직선의 가장 아래의 흰색
         forward = min(int(height),int(first_nonzero(image[:,center],0,height))-1)
         
+        #left, right 반대임
         left_line = first_nonzero(image[height-forward:height,center:],1, width-center)
         right_line = first_nonzero(np.fliplr(image[height-forward:height,:center]),1, center)
 
@@ -75,70 +76,13 @@ def set_path3(image):
         #backward
         elif forward < 20 or forward < 50 and abs(m) < 0.2:
             action = 'x'
-
         #forward
-        elif abs(m) < 0.25:
-            action = 'w'
-
-        #left
-        elif m > 0:
-            action = 'w'
-        #right
         else:
             action = 'w'
-
+        
     #backward
     except:
         action = 'x'
         m = 0
 
     return action, round(m,4), forward, left_line, right_line, center, direction
-
-
-
-"""
-
-if __name__ == "__main__":
-    start_time=time.time()
-    path = '*.jpg'
-    file_list = glob.glob(path)
-    cnt = 0
-    for i in file_list:
-        image = cv2.imread(i)
-        #name, extension = os.path.splitext(os.path.basename(i))
-        masked_image=select_white(image,160)
-        result=set_path3(masked_image,0.25)
-
-        
-        #---cv2.line---
-
-        line = []
-        #오른쪽 라인        
-        for j in range(result[2]):
-            left_coord = (+result[5]+1+result[3][j], 239-j)
-            line.append(left_coord)
-            #masked_image = cv2.line(masked_image, left_coord, left_coord,(255,255,255), 5)
-        #print(line)
-        
-        #왼쪽 라인
-        for j in range(result[2]):
-            right_coord = (result[5]+1-result[4][j], 239-j)
-            line.append(right_coord)
-            #masked_image = cv2.line(masked_image, right_coord, right_coord,(255,255,255), 5)
-        #print(line)  
-
-        #기울기
-        try:
-            masked_image = cv2.line(masked_image, result[6][0], result[6][1],(255,255,255), 5)
-            print(result[6])
-        except:
-            pass
-
-        print(result[0], result[1])
-        
-        
-        cv2.imshow("video", masked_image)
-        cv2.waitKey(0)        
-    cv2.destroyAllWindows()
-    #print('\nAvearage FPS:', round(len(file_list)/(time.time()-start_time),2), "Acurracy:", str(round(100*cnt/len(file_list), 2))+" %")
-"""
