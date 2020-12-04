@@ -1,3 +1,11 @@
+PORT = 6000
+host = 'gaeseung.local'
+#host = 'localhost'
+
+# 0 : main, 1 : main+streaming
+switch = 0
+
+# import the necessary packages
 from picamera.array import PiRGBArray
 from picamera import PiCamera
 import time
@@ -80,6 +88,19 @@ def undistort(img):
     img = cv2.remap(img, map1, map2, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
     return img
 
+def UploadNumpy(img):
+    
+    # socket HTTPConnection
+    conn = HTTPConnection(f"{host}:{PORT}")
+    result, img = cv2.imencode('.jpg', img, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
+    if not result:
+        raise Exception('Image encode error')
+
+    conn.request('POST', '/', img.tobytes(), {
+        "X-Client2Server" : "123"
+    })
+    res = conn.getresponse()
+
 def motor(action, m):
     if action == 's':
         direction = 'stop'
@@ -108,14 +129,6 @@ def motor(action, m):
     elif action == 'x':
         direction = 'backward'
         speed = 40
-
-    elif action == 'c':
-        direction = 'backward-left'
-        speed = 50
-
-    elif action == 'z':
-        direction = 'backward-right'
-        speed = 50
 
     pw1 = min(speed * MOTOR_SPEEDS[action][0], 100)
     pw2 = min(speed * MOTOR_SPEEDS[action][1], 100)
@@ -167,10 +180,10 @@ def ultrasonic():
     return distance
 
 
-def main():
+def main(q):
     #for capture every second
     checktimeBefore = int(time.strftime('%S'))
-    stop_sign = 0
+
     for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
         # grab the raw NumPy array representing the image, then initialize the timestamp
         # and occupied/unoccupied text
@@ -214,8 +227,8 @@ def main():
                 result_direction = 'q'
             else:
                 result_direction = result[0]      
-            #print(line_left[0][0])
-            #print(line_right[0][0])        
+            print(line_left[0][0])
+            print(line_right[0][0])        
         else:
             result_direction = result[0]
 
@@ -226,42 +239,26 @@ def main():
 
         #ultrasonic
         ultra = ultrasonic()
-        if ultra > 0 and ultra < 10:
+        if ultra > 0 and ultra < 12:
             #print('stop')
             direction = motor('s',0)
             print(ultra)
 
         #cascade
-        cas = len(cascade(undistorted_image))
-        if cas != 0:
-            if stop_sign == 0:
-                direction = motor('s',result[1])
-                print('stop sign')
-                time.sleep(5)
-                stop_sign = stop_sign + 1
-            else:
-                print('stop already')
-
+#        cas = len(cascade(undistorted_image))
+#        if cas != 0:
+#            direction = motor('s')
+            
         #AR marker
         markers = ar_markers.detect_markers(undistorted_image)
         for marker in markers:
-            #left
             if marker.id == 114:
-                direction = motor('a',result[1])
-                print('left', marker.id)
-                time.sleep(0.1)
-            #right
+                direction = motor('q',result[1])
             elif marker.id == 922:
-                direction = motor('d',result[1])
-                print('right', marker.id)
-                time.sleep(0.1)
-            #finish, stop
+                direction = motor('e',result[1])
             elif marker.id == 2537:
-                direction = motor('s',0)
-                time.sleep(10)
-                print('stop', marker.id)               
+                direction = motor('s',0)               
             marker.highlite_marker(undistorted_image)
-            
 #----------------------------
         #putText
         try:
@@ -277,6 +274,12 @@ def main():
         key = cv2.waitKey(1) & 0xFF
         rawCapture.truncate(0)
 
+        #Threading
+        if switch == 1:
+            evt = threading.Event()
+            qdata = undistorted_image
+            q.put((qdata, evt))
+
         # q : break, tap : capture
         if key == ord("q"):
             break
@@ -284,7 +287,24 @@ def main():
             captured(undistorted_image)
 
 
+def streaming(q):
+    while True:
+        qdata, evt = q.get()
+        UploadNumpy(qdata)
+        evt.set()
+        q.task_done()
+
+
 if __name__ == "__main__":
-    main()
+    q = Queue()
+    thread_one = threading.Thread(target=main, args=(q,))
+    thread_two = threading.Thread(target=streaming, args=(q,))
+    thread_two.daemon = True
+
+    thread_one.start()
+    if switch == 1:
+        thread_two.start()
+
+    q.join()
 
 
