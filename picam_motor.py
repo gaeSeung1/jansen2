@@ -125,9 +125,9 @@ def main():
         #----motor control----
 
         #cascade
-        cas = len(cascade(undistorted_image))
-        if cas != 0:
-            print(cas)
+#        cas = len(cascade(undistorted_image))
+#        if cas != 0:
+#            print(cas)
             #motor('s')
 
         #AR marker
