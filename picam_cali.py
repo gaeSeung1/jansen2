@@ -55,9 +55,6 @@ MOTOR_SPEEDS = {
     "z": (0, -1), "x": (-1, -1), "c": (-1, 0),
 }
 
-# socket HTTPConnection
-conn = HTTPConnection(f"{host}:{PORT}")
-
 # Information of picam calibration 
 DIM=(320, 240)
 K=np.array([[132.13704662178574, 0.0, 166.0686598959872], [0.0, 133.16643727381444, 123.27563566060049], [0.0, 0.0, 1.0]])
@@ -92,6 +89,9 @@ def undistort(img):
     return img
 
 def UploadNumpy(img):
+    
+    # socket HTTPConnection
+    conn = HTTPConnection(f"{host}:{PORT}")
     result, img = cv2.imencode('.jpg', img, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
     if not result:
         raise Exception('Image encode error')
