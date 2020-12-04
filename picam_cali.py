@@ -3,13 +3,13 @@ from picamera import PiCamera
 import time
 import cv2
 import numpy as np
-import ar_markers
 from Time import Time
 import threading
 from queue import Queue
 from http.client import HTTPConnection
 import RPi.GPIO as GPIO
 from decision import *
+from detect import detect_markers
 
 #motor init
 GPIO.setmode(GPIO.BCM)
@@ -214,8 +214,7 @@ def main():
                 result_direction = 'q'
             else:
                 result_direction = result[0]      
-            #print(line_left[0][0])
-            #print(line_right[0][0])        
+      
         else:
             result_direction = result[0]
 
@@ -243,24 +242,30 @@ def main():
                 print('stop already')
 
         #AR marker
-        markers = ar_markers.detect_markers(undistorted_image)
+        distance = detect_markers(undistorted_image)[1]
+        markers = detect_markers(undistorted_image)[0]
+
         for marker in markers:
-            #left
-            if marker.id == 114:
-                direction = motor('a',result[1])
-                print('left', marker.id)
-                time.sleep(0.1)
-            #right
-            elif marker.id == 922:
-                direction = motor('d',result[1])
-                print('right', marker.id)
-                time.sleep(0.1)
-            #finish, stop
-            elif marker.id == 2537:
-                direction = motor('s',0)
-                time.sleep(10)
-                print('stop', marker.id)               
+            #highlight
             marker.highlite_marker(undistorted_image)
+            if distance > 60:
+                print("distance :", distance)
+                #left
+                if marker.id == 114:
+                    direction = motor('a',result[1])
+                    print('left', marker.id)
+                    time.sleep(0.1)
+                #right
+                elif marker.id == 922:
+                    direction = motor('d',result[1])
+                    print('right', marker.id)
+                    time.sleep(0.1)
+                #finish, stop
+                elif marker.id == 2537:
+                    direction = motor('s',0)
+                    time.sleep(10)
+                    print('stop', marker.id)               
+            
             
 #----------------------------
         #putText

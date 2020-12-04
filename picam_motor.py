@@ -7,9 +7,9 @@ from picamera import PiCamera
 import time
 import cv2
 import numpy as np
-import ar_markers
 from Time import Time
 import RPi.GPIO as GPIO
+from detect import detect_markers
 
 # motor init
 GPIO.setmode(GPIO.BCM)
@@ -125,22 +125,26 @@ def main():
         #----motor control----
 
         #cascade
-#        cas = len(cascade(undistorted_image))
-#        if cas != 0:
-#            print(cas)
+        cas = len(cascade(undistorted_image))
+        if cas != 0:
+            print(cas)
             #motor('s')
 
         #AR marker
-
-        markers = ar_markers.detect_markers(undistorted_image)
+        distance = detect_markers(undistorted_image)[1]
+        markers = detect_markers(undistorted_image)[0]
+        
         for marker in markers:
-            if marker.id == 114:
-                print('left', marker.id)
-            elif marker.id == 922:
-                print('right', marker.id)
-            elif marker.id == 2537:
-                print('stop', marker.id)              
             marker.highlite_marker(undistorted_image)
+            if distance > 60:
+                print("distance :", distance)
+                if marker.id == 114:
+                    print('left', marker.id)
+                elif marker.id == 922:
+                    print('right', marker.id)
+                elif marker.id == 2537:
+                    print('stop', marker.id)              
+                
 
         # show the frame
         cv2.imshow("Frame", undistorted_image)
