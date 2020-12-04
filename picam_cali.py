@@ -232,14 +232,15 @@ def main():
 
         #cascade
         cas = len(cascade(undistorted_image))
+        #if detected
         if cas != 0:
-            if stop_sign == 0:
+            if stop_sign == 1:
                 direction = motor('s',result[1])
                 print('stop sign')
                 time.sleep(5)
-                stop_sign = stop_sign + 1
             else:
-                print('stop already')
+                print('Non stop', stop_sign)
+            stop_sign = stop_sign + 1
 
         #AR marker
         distance = detect_markers(undistorted_image)[1]
@@ -248,23 +249,23 @@ def main():
         for marker in markers:
             #highlight
             marker.highlite_marker(undistorted_image)
-            if distance > 60:
+            if distance > 50:
                 print("distance :", distance)
                 #left
                 if marker.id == 114:
                     direction = motor('a',result[1])
                     print('left', marker.id)
-                    time.sleep(0.1)
+                    time.sleep(0.15)
                 #right
                 elif marker.id == 922:
                     direction = motor('d',result[1])
                     print('right', marker.id)
-                    time.sleep(0.1)
+                    time.sleep(0.15)
                 #finish, stop
                 elif marker.id == 2537:
                     direction = motor('s',0)
-                    time.sleep(10)
                     print('stop', marker.id)               
+                    time.sleep(10)
             
             
 #----------------------------
