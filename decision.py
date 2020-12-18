@@ -79,6 +79,7 @@ def set_path3(image):
         #forward
         else:
             action = 'w'
+
         
     #backward
     except:

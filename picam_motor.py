@@ -34,7 +34,7 @@ p1.start(0)
 p2.start(0)
 
 # motor action init
-speed = 50
+speed = 70
 HALF=0
 MOTOR_SPEEDS = {
     ord("q"): (HALF, 1), ord("w"): (1, 1), ord("e"): (1, HALF),

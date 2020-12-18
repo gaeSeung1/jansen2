@@ -222,33 +222,42 @@ def main():
                 result_direction = '1'
             else:
                 result_direction = result[0]      
-      
         else:
             result_direction = result[0]
 
         #motor ON!
         direction = motor(result_direction, result[1])
     
+        #1st U-turn
+        if result[2] < 20 and abs(result[1]) < 0.2:
+            motor('a', result[1])
+            time.sleep(0.5)
+            
 #----------------------------
 
         #ultrasonic
         ultra = ultrasonic()
-        if ultra > 0 and ultra < 10:
+        if ultra > 0 and ultra < 12:
             #print('stop')
             direction = motor('s',0)
             print(ultra)
+            time.sleep(1)
 
         #cascade
-        cas = len(cascade(undistorted_image))
+        cas = cascade(undistorted_image)
+        cas_detect = len(cas)
+
         #if detected
-        if cas != 0:
-            if stop_sign == 2:
-                direction = motor('s',result[1])
-                print('stop sign')
-                time.sleep(5)
-            else:
-                print('Non stop', stop_sign)
-            stop_sign = stop_sign + 1
+        if cas_detect != 0:
+            cas_distance = cas[0][2]
+            if cas_distance > 30:
+                if stop_sign == 3:
+                    direction = motor('s',result[1])
+                    print('stop sign')
+                    time.sleep(5)
+                else:
+                    print('Non stop', stop_sign)
+                stop_sign = stop_sign + 1
 
         #AR marker
         distance = detect_markers(undistorted_image)[1]
@@ -257,24 +266,29 @@ def main():
         for marker in markers:
             #highlight
             marker.highlite_marker(undistorted_image)
-            if distance > 40:
+            #print(distance)
+            if distance > 20:
                 #print("distance :", distance)
-                #left
-                if marker.id == 114:
-                    direction = motor('a',result[1])
-                    print('left', marker.id)
-                    time.sleep(0.3)
-                #right
-                elif marker.id == 922:
-                    direction = motor('d',result[1])
-                    print('right', marker.id)
-                    time.sleep(0.3)
+
                 #finish, stop
-                elif marker.id == 2537:
+                if marker.id == 2537:
+                    direction = motor('w',0)
+                    time.sleep(1)
                     direction = motor('s',0)
                     print('stop', marker.id)               
                     time.sleep(5)
-            
+                if distance > 40:
+                    #left
+                    if marker.id == 114:
+                        direction = motor('a',result[1])
+                        print('left', marker.id)
+                        time.sleep(0.5)
+                    #right
+                    elif marker.id == 922:
+                        direction = motor('d',result[1])
+                        print('right', marker.id)
+                        time.sleep(0.5)
+                
             
 #----------------------------
         #putText
