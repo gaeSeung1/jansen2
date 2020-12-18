@@ -185,13 +185,13 @@ def main():
         undistorted_image = undistort(image)
 
         #brightness
-        M = np.ones(undistorted_image.shape, dtype = "uint8") * 20
+        M = np.ones(undistorted_image.shape, dtype = "uint8") * 25
         undistorted_image = cv2.add(undistorted_image, M)
 
 #--------------motor control--------------
 
         #decision (action, round(m,4), forward, left_line, right_line, center, direction)
-        masked_image=select_white(undistorted_image,100)
+        masked_image=select_white(undistorted_image,170)
         result=set_path3(masked_image)
 
         #line marker
@@ -229,7 +229,7 @@ def main():
         direction = motor(result_direction, result[1])
     
         #1st U-turn
-        if result[2] < 20 and abs(result[1]) < 0.2:
+        if result[2] < 30 and abs(result[1]) < 0.2:
             motor('a', result[1])
             time.sleep(0.5)
             
@@ -250,7 +250,7 @@ def main():
         #if detected
         if cas_detect != 0:
             cas_distance = cas[0][2]
-            if cas_distance > 30:
+            if cas_distance > 20:
                 if stop_sign == 3:
                     direction = motor('s',result[1])
                     print('stop sign')
@@ -266,10 +266,9 @@ def main():
         for marker in markers:
             #highlight
             marker.highlite_marker(undistorted_image)
-            #print(distance)
-            if distance > 20:
-                #print("distance :", distance)
+            print("distance :", distance)
 
+            if distance > 10:
                 #finish, stop
                 if marker.id == 2537:
                     direction = motor('w',0)
@@ -277,7 +276,7 @@ def main():
                     direction = motor('s',0)
                     print('stop', marker.id)               
                     time.sleep(5)
-                if distance > 40:
+                if distance > 30:
                     #left
                     if marker.id == 114:
                         direction = motor('a',result[1])
