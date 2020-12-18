@@ -183,7 +183,7 @@ def main():
         image = frame.array
 
         #undistort
-        undistorted_image = image#undistort(image)
+        undistorted_image = undistort(image)
 
         #brightness
         M = np.ones(undistorted_image.shape, dtype = "uint8") * 25
@@ -194,6 +194,7 @@ def main():
         #decision (action, round(m,4), forward, left_line, right_line, center, direction)
         masked_image=select_white(undistorted_image,170)
         result=set_path3(masked_image)
+
 
         #straight
         if result[0] == 'w':
@@ -270,13 +271,12 @@ def main():
                         print('right', marker.id)
                         time.sleep(0.5)
                 
-            
 #----------------------------
         # show the frame
-        cv2.imshow("Frame", undistorted_image)
+        cv2.imshow("Frame", masked_image)
         key = cv2.waitKey(1) & 0xFF
         rawCapture.truncate(0)
-        
+
         FPS_list.append(1)
         checktime = int(time.strftime('%S'))
         if checktime - checktimeBefore == 1 or checktime - checktimeBefore == -59:
