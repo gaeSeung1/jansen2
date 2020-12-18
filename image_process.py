@@ -5,6 +5,12 @@ import time
 import os
 import glob
 
+def select_white(image, white):
+    lower = np.uint8([white,white,white])
+    upper = np.uint8([255,255,255])
+    white_mask = cv2.inRange(image, lower, upper)
+    return white_mask
+
 def show_BGR(image, axis='off', interpolation='None'):
     result = image[:,:,::-1]
     plt.axis(axis)
@@ -63,7 +69,8 @@ def hough_transform(image, edges):
     return image
 
 def region_of_interest(image, w=0.05, point=(0.2,0.5)):
-    height, width = image.shape
+    height = 320
+    width = 240
         
     point1 = ( int(width*w), height )
     point2 = ( int(width*(1-w)), height )
@@ -76,9 +83,18 @@ def region_of_interest(image, w=0.05, point=(0.2,0.5)):
     masked_image = cv2.bitwise_and(image, mask)
     return masked_image
 
-
+def main():
+    while True:
+        image = cv2.imread('1218084836.jpg')
+        image=select_white(image,100)
+        cv2.imshow('Frame',image)
+        key = cv2.waitKey(1) & 0xFF
+        if key == ord('q'):
+            break
+    
 if __name__ == '__main__':
-    image_array = cv2.imread('1125193134.jpg')
+    main()
+    
     
 
     

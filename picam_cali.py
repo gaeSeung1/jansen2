@@ -33,6 +33,8 @@ p2=GPIO.PWM(pwm2,100)
 p1.start(0)
 p2.start(0)
 
+balance = 1.3
+
 # ultrasonic init
 GPIO_TRIGGER = 14
 GPIO_ECHO    = 15
@@ -43,9 +45,10 @@ GPIO.output(GPIO_TRIGGER, False)
 #motor action init
 MOTOR_SPEEDS = {
     "q": (0, 1), "w": (1, 1), "e": (1, 0),
-    "a": (-1, 1), "s": (0, 0), "d": (1, -1),
+    "a": (-0.3, 1), "s": (0, 0), "d": (1, -0.3),
     "z": (0, -1), "x": (-1, -1), "c": (-1, 0),
 }
+
 
 # Information of picam calibration 
 DIM=(320, 240)
@@ -103,7 +106,7 @@ def motor(action, m):
 
     elif action == 'w':
         direction = 'forward'
-        speed = 50
+        speed = 60
 
     elif action == 'x':
         direction = 'backward'
@@ -117,7 +120,7 @@ def motor(action, m):
         direction = 'backward-right'
         speed = 50
 
-    pw1 = min(speed * MOTOR_SPEEDS[action][0], 100)
+    pw1 = min(speed * MOTOR_SPEEDS[action][0] * balance, 100)
     pw2 = min(speed * MOTOR_SPEEDS[action][1], 100)
 
     if pw1>0:
@@ -183,7 +186,7 @@ def main():
 #--------------motor control--------------
 
         #decision (action, round(m,4), forward, left_line, right_line, center, direction)
-        masked_image=select_white(undistorted_image,160)
+        masked_image=select_white(undistorted_image,100)
         result=set_path3(masked_image)
 
         #line marker
