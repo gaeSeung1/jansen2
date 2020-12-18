@@ -1,8 +1,11 @@
-MOTOR_SPEEDS = {
-    "q": (0, 1), "w": (1, 1), "e": (1, 0),
-    "a": (-0.5, 1), "s": (0, 0), "d": (1, -0.5),
-    "z": (0, -1), "x": (-1, -1), "c": (-1, 0),
-}
-MOTOR_SPEEDS['q'] = (1,1)
+from __future__ import print_function
+import numpy as np
+import cv2
 
-print(MOTOR_SPEEDS)
+# 같은 디렉토리 내의 "cat.jpg"라는 이미지 불러와 보여주기
+image = cv2.imread("1218153749.jpg")
+
+
+cv2.imshow("Added", image)
+
+cv2.waitKey(0)

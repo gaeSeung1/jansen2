@@ -74,18 +74,18 @@ n = 0
 while True:
     if GPIO.input(sound):
         pass
-        #print('Noisy')
-        
+        n = 0
+
+    #sound detect
     else:
         n += 1
 
-        #print('Sound', n)
-    
     if n == 2:
         motor(ord('x'))
         time.sleep(1)
         motor(ord('s'))
         n = 0
+
 
 
     time.sleep(0.01)

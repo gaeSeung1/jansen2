@@ -33,7 +33,7 @@ p2=GPIO.PWM(pwm2,100)
 p1.start(0)
 p2.start(0)
 
-balance = 1.2
+balance = 1.3
 
 # ultrasonic init
 GPIO_TRIGGER = 14
@@ -44,9 +44,8 @@ GPIO.output(GPIO_TRIGGER, False)
 
 #motor action init
 MOTOR_SPEEDS = {
-    "1": (0, 1), "2" : (1, 0), 
-    "q": (-0.3, 1), "w": (1, 1), "e": (1, -0.3),
-    "a": (-1, 1), "s": (0, 0), "d": (1, -1),
+    "q": (0, 1), "w": (1, 1), "e": (1, 0),
+    "a": (-0.3, 1), "s": (0, 0), "d": (1, -0.3),
     "z": (0, -1), "x": (-1, -1), "c": (-1, 0),
 }
 
@@ -91,11 +90,11 @@ def motor(action, m):
 
     elif action == 'q':
         direction = 'left'
-        speed = 60
+        speed = 50
         
     elif action == 'e':
         direction = 'right'
-        speed = 60
+        speed = 50
 
     elif action == 'a':
         direction = 'spin left'
@@ -113,12 +112,12 @@ def motor(action, m):
         direction = 'backward'
         speed = 40
 
-    elif action == '1':
-        direction = 'straight left'
+    elif action == 'c':
+        direction = 'backward-left'
         speed = 50
 
-    elif action == '2':
-        direction = 'straight right'
+    elif action == 'z':
+        direction = 'backward-right'
         speed = 50
 
     pw1 = min(speed * MOTOR_SPEEDS[action][0] * balance, 100)
@@ -184,10 +183,6 @@ def main():
         #undistort
         undistorted_image = undistort(image)
 
-        #brightness
-        M = np.ones(undistorted_image.shape, dtype = "uint8") * 20
-        undistorted_image = cv2.add(undistorted_image, M)
-
 #--------------motor control--------------
 
         #decision (action, round(m,4), forward, left_line, right_line, center, direction)
@@ -217,9 +212,9 @@ def main():
         if result[0] == 'w' and line_left != [] and line_right != []:
             straight_factor = 30
             if line_left[0][0] > straight_factor:
-                result_direction = '2'
+                result_direction = 'e'
             elif line_right[0][0] < 320-straight_factor:
-                result_direction = '1'
+                result_direction = 'q'
             else:
                 result_direction = result[0]      
       
@@ -258,22 +253,22 @@ def main():
             #highlight
             marker.highlite_marker(undistorted_image)
             if distance > 40:
-                #print("distance :", distance)
+                print("distance :", distance)
                 #left
                 if marker.id == 114:
                     direction = motor('a',result[1])
                     print('left', marker.id)
-                    time.sleep(0.3)
+                    time.sleep(0.2)
                 #right
                 elif marker.id == 922:
                     direction = motor('d',result[1])
                     print('right', marker.id)
-                    time.sleep(0.3)
+                    time.sleep(0.2)
                 #finish, stop
                 elif marker.id == 2537:
                     direction = motor('s',0)
                     print('stop', marker.id)               
-                    time.sleep(5)
+                    time.sleep(10)
             
             
 #----------------------------
