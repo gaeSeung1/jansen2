@@ -86,4 +86,4 @@ def set_path3(image):
         action = 'x'
         m = 0
 
-    return action, round(m,4), forward, left_line, right_line, center, direction
+    return action, round(m,4), forward, left_line, right_line, center, direction, left, right

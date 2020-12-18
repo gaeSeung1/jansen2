@@ -183,7 +183,7 @@ def main():
         image = frame.array
 
         #undistort
-        undistorted_image = undistort(image)
+        undistorted_image = image#undistort(image)
 
         #brightness
         M = np.ones(undistorted_image.shape, dtype = "uint8") * 25
@@ -195,31 +195,12 @@ def main():
         masked_image=select_white(undistorted_image,170)
         result=set_path3(masked_image)
 
-        #line marker
-        line_left = []
-        line_right = []
-        for j in range(result[2]):
-            #left
-            left_coord = (result[5]+1-result[4][j], 239-j)
-            line_left.append(left_coord)
-            undistorted_image = cv2.line(undistorted_image, left_coord, left_coord,(0,255,0), 4)
-            #right
-            right_coord = (+result[5]+1+result[3][j], 239-j)
-            line_right.append(right_coord)
-            undistorted_image = cv2.line(undistorted_image, right_coord, right_coord,(0,255,0), 4)
-
-        #slope
-        try:
-            undistorted_image = cv2.line(undistorted_image, result[6][0], result[6][1],(0,0,255), 4)
-        except:
-            pass    
-
         #straight
-        if result[0] == 'w' and line_left != [] and line_right != []:
+        if result[0] == 'w':
             straight_factor = 30
-            if line_left[0][0] > straight_factor:
+            if result[7] > straight_factor:
                 result_direction = '2'
-            elif line_right[0][0] < 320-straight_factor:
+            elif result[8] < 320-straight_factor:
                 result_direction = '1'
             else:
                 result_direction = result[0]      
@@ -291,20 +272,11 @@ def main():
                 
             
 #----------------------------
-        #putText
-        try:
-            #slope
-            cv2.putText(undistorted_image,'m = '+str(result[1]), (10,20),cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255,255,255), 1) 
-            #direction
-            cv2.putText(undistorted_image, direction, (10,40),cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255,255,255), 1) 
-        except:
-            pass
-#----------------------------
         # show the frame
         cv2.imshow("Frame", undistorted_image)
         key = cv2.waitKey(1) & 0xFF
         rawCapture.truncate(0)
-
+        
         FPS_list.append(1)
         checktime = int(time.strftime('%S'))
         if checktime - checktimeBefore == 1 or checktime - checktimeBefore == -59:
