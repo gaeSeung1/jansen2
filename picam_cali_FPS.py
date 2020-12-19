@@ -43,8 +43,8 @@ GPIO.setup(GPIO_TRIGGER,GPIO.OUT)
 GPIO.setup(GPIO_ECHO,GPIO.IN)
 GPIO.output(GPIO_TRIGGER, False)
 
-left_motor = (0, 1)
-right_motor= (1, 0)
+left_motor = (-0.7, 1)
+right_motor= (1, -0.7)
 
 #motor action init
 MOTOR_SPEEDS = {
@@ -184,7 +184,7 @@ def main():
     FPS_list = []
     ultra_switch = 1
     ultra_detect = 0
-    ultra_cnt = 3
+    ultra_cnt = 0
     cas_switch = 0
     cas_cnt = 0
     right_once = 0
