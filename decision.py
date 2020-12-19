@@ -68,10 +68,10 @@ def set_path3(image):
         #-------------방향 결정-----------
 
         #spin left
-        if forward < 80 and m > 0:
+        if forward < 75 and m > 0:
             action = 'q'
         #spin right
-        elif forward < 80 and m < 0:
+        elif forward < 75 and m < 0:
             action = 'e'   
         #backward
         elif forward < 50 and abs(m) < 0.2:
@@ -86,4 +86,4 @@ def set_path3(image):
         action = 'x'
         m = 0
 
-    return action, round(m,4), forward, left_line, right_line, center, direction, left, right
+    return action, round(m,4), forward, left, right

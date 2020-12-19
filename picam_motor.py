@@ -34,7 +34,8 @@ p1.start(0)
 p2.start(0)
 
 # motor action init
-speed = 70
+speed = 60
+balance = 0.9
 HALF=0
 MOTOR_SPEEDS = {
     ord("q"): (HALF, 1), ord("w"): (1, 1), ord("e"): (1, HALF),
@@ -56,7 +57,7 @@ camera.resolution = (320, 240)
 camera.vflip = True
 camera.hflip = True
 #shutterspeed
-camera.framerate = 32
+camera.framerate = 42
 rawCapture = PiRGBArray(camera, size=camera.resolution)
 # allow the camera to warmup
 time.sleep(0.1)
@@ -78,8 +79,8 @@ def undistort(img):
     return img
 
 def motor(action):
-    pw1 = speed * MOTOR_SPEEDS[action][0]
-    pw2 = speed * MOTOR_SPEEDS[action][1]
+    pw1 = min(speed * MOTOR_SPEEDS[action][0] * balance, 100)
+    pw2 = min(speed * MOTOR_SPEEDS[action][1], 100)
     if pw1>0:
         GPIO.output(motor11,GPIO.HIGH)
         GPIO.output(motor12,GPIO.LOW)
@@ -121,6 +122,10 @@ def main():
 
         #undistort
         undistorted_image = undistort(image)
+
+        #brightness
+        M = np.ones(undistorted_image.shape, dtype = "uint8") * 50
+        undistorted_image = cv2.add(undistorted_image, M)
 
         #----motor control----
 

@@ -23,19 +23,18 @@ p2=GPIO.PWM(pwm2,100)
 p1.start(0)
 p2.start(0)
 
-# motor action init
-speed = 50
-HALF=0
+balance = 0.7
+#motor action init
 MOTOR_SPEEDS = {
-    ord("q"): (HALF, 1), ord("w"): (1, 1), ord("e"): (1, HALF),
-    ord("a"): (-1, 1), ord("s"): (0, 0), ord("d"): (1, -1),
-    ord("z"): (-HALF, -1), ord("x"): (-1, -1), ord("c"): (-1, -HALF),
+    "1": (0, 1), "2" : (1, 0), 
+    "q": (-0.3, 1), "w": (1, 1), "e": (1, -0.3),
+    "a": (-1, 1), "s": (0, 0), "d": (1, -1),
+    "z": (0, -1), "x": (-1, -1), "c": (-1, 0),
 }
 
-
-def motor(action):
-    pw1 = speed * MOTOR_SPEEDS[action][0]
-    pw2 = speed * MOTOR_SPEEDS[action][1]
+def motor(action, speed):
+    pw1 = min(speed * MOTOR_SPEEDS[action][0] * balance, 100)
+    pw2 = min(speed * MOTOR_SPEEDS[action][1], 100)
     if pw1>0:
         GPIO.output(motor11,GPIO.HIGH)
         GPIO.output(motor12,GPIO.LOW)
@@ -56,39 +55,81 @@ def motor(action):
         GPIO.output(motor22,GPIO.LOW)
     p1.ChangeDutyCycle(abs(pw1))
     p2.ChangeDutyCycle(abs(pw2))
-    if action == ord('s'):
+    if action == 's':
         print('stop')
-    elif action == ord('a'):
+    elif action == 'a':
         print('left')
-    elif action == ord('d'):
+    elif action == 'd':
         print('right')
-    elif action == ord('x'):
+    elif action == 'x':
         print('back')
+    elif action == 'w':
+        print('forward')
 
 
 sound = 10
 GPIO.setup(sound, GPIO.IN)
 
-n = 0
+detect = 0
+detect_1st = 0
+mode = 0
+switch = 1
+
+start = int(time.strftime('%S'))
 
 while True:
-    if GPIO.input(sound):
-        pass
-        n = 0
+    finish = int(time.strftime('%S'))
+    if switch == 1:
+        if GPIO.input(sound):
+            pass
 
-    #sound detect
-    else:
-        n += 1
+        #sound detect
+        else:
+            detect += 1
+            time.sleep(0.15)
 
-    if n == 2:
-        motor(ord('x'))
-        time.sleep(1)
-        motor(ord('s'))
-        n = 0
+        print(detect_1st, detect, finish, start)
+        #first detect
+        if detect == 1 and detect_1st != 1:
+            start = int(time.strftime('%S'))
+            print('detect start')
+            detect_1st = 1
+        
+        if finish - start == 3 or finish - start == 3-60:
+            if detect >= 1:
+                mode = detect
+                print('detect finish, mode :', mode)
+                switch = 0
+                
+                if mode >= 1:
+                    if mode == 1:
+                        motor('w', 50)
+                        time.sleep(1)
+            
+                    elif mode == 2:
+                        motor('a', 70)
+                        time.sleep(0.7)
+            
+                    elif mode == 3:
+                        motor('d', 70)
+                        time.sleep(0.7)
+            
+                    elif mode == 4:
+                        motor('d', 70)
+                        time.sleep(0.5)
+            
+                    elif mode >= 5:
+                        motor('w', 50)
+                        time.sleep(5)
 
+                    motor('s', 0)
 
+                    switch = 1
+                    detect = 0
+                    detect_1st = 0
+                    time.sleep(0.5)
 
-    time.sleep(0.01)
+    time.sleep(0.005)
         
 
 

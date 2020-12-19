@@ -33,7 +33,7 @@ p2=GPIO.PWM(pwm2,100)
 p1.start(0)
 p2.start(0)
 
-balance = 1.2
+balance = 0.9
 
 # ultrasonic init
 GPIO_TRIGGER = 14
@@ -63,7 +63,7 @@ camera.resolution = (320, 240)
 camera.vflip = True
 camera.hflip = True
 #shutterspeed
-camera.framerate = 32
+camera.framerate = 42
 rawCapture = PiRGBArray(camera, size=camera.resolution)
 # allow the camera to warmup
 time.sleep(0.1)
@@ -91,11 +91,11 @@ def motor(action, m):
 
     elif action == 'q':
         direction = 'left'
-        speed = 60
+        speed = 70
         
     elif action == 'e':
         direction = 'right'
-        speed = 60
+        speed = 70
 
     elif action == 'a':
         direction = 'spin left'
@@ -107,7 +107,7 @@ def motor(action, m):
 
     elif action == 'w':
         direction = 'forward'
-        speed = 60
+        speed = 50
 
     elif action == 'x':
         direction = 'backward'
@@ -176,9 +176,19 @@ def main():
     checktimeBefore = int(time.strftime('%S'))
     FPS_list = []
     stop_sign = 0
+    ultra_switch = 1
+    ultra_detect = 0
+    cas_switch = 0
+
     for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
         # grab the raw NumPy array representing the image, then initialize the timestamp
         # and occupied/unoccupied text
+        FPS_list.append(1)
+        checktime = int(time.strftime('%S'))
+        if checktime - checktimeBefore == 1 or checktime - checktimeBefore == -59:
+            print("FPS :", len(FPS_list))
+            FPS_list = []
+            checktimeBefore = checktime
 
         image = frame.array
 
@@ -186,22 +196,22 @@ def main():
         undistorted_image = undistort(image)
 
         #brightness
-        M = np.ones(undistorted_image.shape, dtype = "uint8") * 25
+        M = np.ones(undistorted_image.shape, dtype = "uint8") * 50
         undistorted_image = cv2.add(undistorted_image, M)
 
 #--------------motor control--------------
 
         #decision (action, round(m,4), forward, left_line, right_line, center, direction)
-        masked_image=select_white(undistorted_image,170)
+        masked_image=select_white(undistorted_image,150)
         result=set_path3(masked_image)
 
 
         #straight
         if result[0] == 'w':
             straight_factor = 30
-            if result[7] > straight_factor:
+            if result[3] > straight_factor:
                 result_direction = '2'
-            elif result[8] < 320-straight_factor:
+            elif result[4] < 320-straight_factor:
                 result_direction = '1'
             else:
                 result_direction = result[0]      
@@ -212,35 +222,49 @@ def main():
         direction = motor(result_direction, result[1])
     
         #1st U-turn
-        if result[2] < 30 and abs(result[1]) < 0.2:
+        if result[2] < 20 and abs(result[1]) < 0.2:
             motor('a', result[1])
             time.sleep(0.5)
-            
+            checktimeBefore = checktime
 #----------------------------
-
+        
         #ultrasonic
-        ultra = ultrasonic()
-        if ultra > 0 and ultra < 12:
-            #print('stop')
-            direction = motor('s',0)
-            print(ultra)
-            time.sleep(1)
 
+        if ultra_switch == 1:
+            ultra = ultrasonic()
+            if ultra > 0 and ultra < 12:
+                direction = motor('s',0)
+                print(ultra)
+                time.sleep(1)
+                checktimeBefore = checktime
+
+                ultra_detect = 1
+        
+        if ultra_detect == 1:
+            if ultra >=12 or ultra == -1:
+                ultra_switch = 0
+                ultra_detect = 0
+                print('ultra stop')
+        
         #cascade
-        cas = cascade(undistorted_image)
-        cas_detect = len(cas)
+        if cas_switch == 1:
+            cas = cascade(undistorted_image)
+            cas_detect = len(cas)
 
-        #if detected
-        if cas_detect != 0:
-            cas_distance = cas[0][2]
-            if cas_distance > 20:
-                if stop_sign == 3:
-                    direction = motor('s',result[1])
-                    print('stop sign')
-                    time.sleep(5)
-                else:
-                    print('Non stop', stop_sign)
-                stop_sign = stop_sign + 1
+            #if detected
+            if cas_detect != 0:
+                cas_distance = cas[0][2]
+                if cas_distance > 20:
+                    if stop_sign == 3:
+                        direction = motor('s',result[1])
+                        print('stop sign')
+                        ultra_switch = 1
+                        cas_switch = 0
+                        time.sleep(5)
+                        checktimeBefore = checktime
+                    else:
+                        print('Non stop', stop_sign)
+                    stop_sign = stop_sign + 1
 
         #AR marker
         distance = detect_markers(undistorted_image)[1]
@@ -256,33 +280,42 @@ def main():
                 if marker.id == 2537:
                     direction = motor('w',0)
                     time.sleep(1)
+                    checktimeBefore = checktime
                     direction = motor('s',0)
                     print('stop', marker.id)               
                     time.sleep(5)
-                if distance > 30:
+                    checktimeBefore = checktime
+                if distance > 40:
                     #left
                     if marker.id == 114:
+                        motor('w', result[1])
+                        time.sleep(0.5)
+                        checktimeBefore = checktime
+
                         direction = motor('a',result[1])
                         print('left', marker.id)
                         time.sleep(0.5)
+                        checktimeBefore = checktime
+                    
+                        cas_switch = 1
                     #right
                     elif marker.id == 922:
                         direction = motor('d',result[1])
                         print('right', marker.id)
                         time.sleep(0.5)
+                        checktimeBefore = checktime
                 
 #----------------------------
+
+
+
         # show the frame
-        cv2.imshow("Frame", masked_image)
+        cv2.imshow("Frame", undistorted_image)
+        cv2.imshow("masked", masked_image)
         key = cv2.waitKey(1) & 0xFF
         rawCapture.truncate(0)
 
-        FPS_list.append(1)
-        checktime = int(time.strftime('%S'))
-        if checktime - checktimeBefore == 1 or checktime - checktimeBefore == -59:
-            print("FPS :", len(FPS_list))
-            FPS_list = []
-            checktimeBefore = checktime
+
 
         # q : break, tap : capture
         if key == ord("q"):
