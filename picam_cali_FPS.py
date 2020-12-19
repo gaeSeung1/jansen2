@@ -33,7 +33,7 @@ p2=GPIO.PWM(pwm2,100)
 p1.start(0)
 p2.start(0)
 
-balance = 0.9
+balance = 1
 
 # ultrasonic init
 GPIO_TRIGGER = 14
@@ -99,15 +99,15 @@ def motor(action, m):
 
     elif action == 'a':
         direction = 'spin left'
-        speed = 70
+        speed = 80
         
     elif action == 'd':
         direction = 'spin right'
-        speed = 70
+        speed = 80
 
     elif action == 'w':
         direction = 'forward'
-        speed = 50
+        speed = 60
 
     elif action == 'x':
         direction = 'backward'
