@@ -79,7 +79,11 @@ def set_path3(image):
         #forward
         else:
             action = 'w'
-
+            straight_factor = 30
+            if left > straight_factor:
+                action = '2'
+            elif right < 320-straight_factor:
+                action = '1'
         
     #backward
     except:

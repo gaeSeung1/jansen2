@@ -33,7 +33,8 @@ p2=GPIO.PWM(pwm2,100)
 p1.start(0)
 p2.start(0)
 
-balance = 1
+#left speed
+balance = 0.7
 
 # ultrasonic init
 GPIO_TRIGGER = 14
@@ -42,10 +43,13 @@ GPIO.setup(GPIO_TRIGGER,GPIO.OUT)
 GPIO.setup(GPIO_ECHO,GPIO.IN)
 GPIO.output(GPIO_TRIGGER, False)
 
+left_motor = (0, 1)
+right_motor= (1, 0)
+
 #motor action init
 MOTOR_SPEEDS = {
     "1": (0, 1), "2" : (1, 0), 
-    "q": (-0.3, 1), "w": (1, 1), "e": (1, -0.3),
+    "q": left_motor, "w": (1, 1), "e": right_motor,
     "a": (-1, 1), "s": (0, 0), "d": (1, -1),
     "z": (0, -1), "x": (-1, -1), "c": (-1, 0),
 }
@@ -91,11 +95,11 @@ def motor(action, m):
 
     elif action == 'q':
         direction = 'left'
-        speed = 70
+        speed = 65
         
     elif action == 'e':
         direction = 'right'
-        speed = 70
+        speed = 65
 
     elif action == 'a':
         direction = 'spin left'
@@ -111,7 +115,8 @@ def motor(action, m):
 
     elif action == 'x':
         direction = 'backward'
-        speed = 40
+        #print('backward')
+        speed = 60
 
     elif action == '1':
         direction = 'straight left'
@@ -121,9 +126,12 @@ def motor(action, m):
         direction = 'straight right'
         speed = 50
 
-    pw1 = min(speed * MOTOR_SPEEDS[action][0] * balance, 100)
-    pw2 = min(speed * MOTOR_SPEEDS[action][1], 100)
-
+    if balance >=1:
+        pw1 = max(min(speed * MOTOR_SPEEDS[action][0] * balance, 100),-100)
+        pw2 = min(speed * MOTOR_SPEEDS[action][1], 100)
+    else:
+        pw1 = min(speed * MOTOR_SPEEDS[action][0], 100)
+        pw2 = max(min(speed * MOTOR_SPEEDS[action][1] * (2-balance), 100), -100)
     if pw1>0:
         GPIO.output(motor11,GPIO.HIGH)
         GPIO.output(motor12,GPIO.LOW)
@@ -145,8 +153,8 @@ def motor(action, m):
     p1.ChangeDutyCycle(abs(pw1))
     p2.ChangeDutyCycle(abs(pw2))
 
-    #print(pw1,pw2)
-    return direction
+#    print(direction)
+    
     
 def ultrasonic():
     GPIO.output(GPIO_TRIGGER, True)
@@ -169,22 +177,26 @@ def ultrasonic():
     distance = (elapsed * 34300)/2
 
     return distance
-
-
+    
 def main():
     #for capture every second
     checktimeBefore = int(time.strftime('%S'))
     FPS_list = []
-    stop_sign = 0
     ultra_switch = 1
     ultra_detect = 0
+    ultra_cnt = 3
     cas_switch = 0
+    cas_cnt = 0
+    right_once = 0
+    left_2nd = 0
 
     for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
         # grab the raw NumPy array representing the image, then initialize the timestamp
         # and occupied/unoccupied text
+
         FPS_list.append(1)
         checktime = int(time.strftime('%S'))
+        #print(checktime, checktimeBefore)
         if checktime - checktimeBefore == 1 or checktime - checktimeBefore == -59:
             print("FPS :", len(FPS_list))
             FPS_list = []
@@ -205,27 +217,25 @@ def main():
         masked_image=select_white(undistorted_image,150)
         result=set_path3(masked_image)
 
-
-        #straight
-        if result[0] == 'w':
-            straight_factor = 30
-            if result[3] > straight_factor:
-                result_direction = '2'
-            elif result[4] < 320-straight_factor:
-                result_direction = '1'
-            else:
-                result_direction = result[0]      
-        else:
-            result_direction = result[0]
-
         #motor ON!
-        direction = motor(result_direction, result[1])
+        motor(result[0], result[1])
     
         #1st U-turn
-        if result[2] < 20 and abs(result[1]) < 0.2:
+        if result[2] < 30 and abs(result[1]) < 0.2 and ultra_cnt <= 2:
             motor('a', result[1])
             time.sleep(0.5)
             checktimeBefore = checktime
+            left_2nd = 1
+            MOTOR_SPEEDS['q'] = left_motor
+            MOTOR_SPEEDS['e'] = right_motor
+
+        #right Re-try
+        #print(result[2])
+        if result[2] < 60 and abs(result[1]) < 0.15 and ultra_cnt == 3 and right_once == 0:   
+            motor('x',result[1])
+            time.sleep(2)
+            checktimeBefore = checktime
+
 #----------------------------
         
         #ultrasonic
@@ -233,17 +243,35 @@ def main():
         if ultra_switch == 1:
             ultra = ultrasonic()
             if ultra > 0 and ultra < 12:
-                direction = motor('s',0)
-                print(ultra)
-                time.sleep(1)
-                checktimeBefore = checktime
+                if ultra_cnt == 0 or ultra_cnt == 2 :
+                    motor('s',0)
+                    print(ultra)
+                    time.sleep(1)
+                    checktimeBefore = checktime
+                elif ultra_cnt == 1:
+                    motor('a',0)
+                    print(ultra)
+                    time.sleep(0.5)
+                    checktimeBefore = checktime
+                    MOTOR_SPEEDS['q'] = (0 ,1)
+                    MOTOR_SPEEDS['e'] = (1 ,0)
 
                 ultra_detect = 1
         
         if ultra_detect == 1:
             if ultra >=12 or ultra == -1:
-                ultra_switch = 0
+                ultra_cnt += 1
+                if ultra_cnt == 1:
+                    ultra_switch = 1
+                elif ultra_cnt == 2:
+                    ultra_switch = 0
+                elif ultra_cnt == 3:
+                    MOTOR_SPEEDS['q'] = (0 ,1)
+                    MOTOR_SPEEDS['e'] = (1 ,0)
+
+
                 ultra_detect = 0
+
                 print('ultra stop')
         
         #cascade
@@ -255,16 +283,17 @@ def main():
             if cas_detect != 0:
                 cas_distance = cas[0][2]
                 if cas_distance > 20:
-                    if stop_sign == 3:
-                        direction = motor('s',result[1])
+                    if cas_cnt == 2:
+                        motor('s',result[1])
                         print('stop sign')
                         ultra_switch = 1
+                        ultra_cnt = 2
                         cas_switch = 0
                         time.sleep(5)
                         checktimeBefore = checktime
                     else:
-                        print('Non stop', stop_sign)
-                    stop_sign = stop_sign + 1
+                        print('Non stop', cas_cnt)
+                    cas_cnt += 1
 
         #AR marker
         distance = detect_markers(undistorted_image)[1]
@@ -273,41 +302,69 @@ def main():
         for marker in markers:
             #highlight
             marker.highlite_marker(undistorted_image)
-            print("distance :", distance)
+            #print("distance :", distance)
 
-            if distance > 10:
                 #finish, stop
-                if marker.id == 2537:
-                    direction = motor('w',0)
+            if marker.id == 2537:
+                if distance > 10:
+            
+                    motor('w',0)
                     time.sleep(1)
                     checktimeBefore = checktime
-                    direction = motor('s',0)
+                    motor('s',0)
                     print('stop', marker.id)               
                     time.sleep(5)
                     checktimeBefore = checktime
-                if distance > 40:
-                    #left
-                    if marker.id == 114:
-                        motor('w', result[1])
-                        time.sleep(0.5)
-                        checktimeBefore = checktime
+                    right_once = 0
+            #left
+            if marker.id == 114:
+                if distance > 35:
+                    motor('w', result[1])
+                    time.sleep(0.8)
+                    checktimeBefore = checktime
 
-                        direction = motor('a',result[1])
-                        print('left', marker.id)
-                        time.sleep(0.5)
+                    motor('a',result[1])
+                    print('left', marker.id)
+                    time.sleep(0.5)
+                    checktimeBefore = checktime
+
+                    ultra_switch = 0
+                    if left_2nd == 1:
+                        cas_switch = 1
+                    else:
+                        MOTOR_SPEEDS['q'] = (0 ,1)
+                        MOTOR_SPEEDS['e'] = (1 ,0)
+                        
+
+            #right
+            print(distance)
+        
+            if marker.id == 922 and right_once == 0 and ultra_cnt == 3:         
+                if distance < 40:
+                    pass
+                else:
+                    if distance >= 40 and distance < 55:
+                        motor('w', result[1])
+                        time.sleep(0.7)
+                        checktimeBefore = checktime
+                    elif distance >= 55 and distance < 80:
+                        motor('w', result[1])
+                        time.sleep(0.3)
                         checktimeBefore = checktime
                     
-                        cas_switch = 1
-                    #right
-                    elif marker.id == 922:
-                        direction = motor('d',result[1])
-                        print('right', marker.id)
+                    elif distance >= 80:
+                        motor('x',result[1])
                         time.sleep(0.5)
-                        checktimeBefore = checktime
-                
+                    motor('d',result[1])
+                    print('right', marker.id)
+                    time.sleep(0.5)
+                    checktimeBefore = checktime
+                    right_once = 1
+                    print("distance :", distance)
+                    MOTOR_SPEEDS['q'] = left_motor
+                    MOTOR_SPEEDS['e'] = right_motor
+
 #----------------------------
-
-
 
         # show the frame
         cv2.imshow("Frame", undistorted_image)
@@ -316,12 +373,14 @@ def main():
         rawCapture.truncate(0)
 
 
-
         # q : break, tap : capture
         if key == ord("q"):
             break
         elif key == ord("\t"):
             captured(undistorted_image)
+        print("left_2nd",left_2nd, "cas_switch",cas_switch, 
+        "ultra_switch", ultra_switch,"ultra_cnt",ultra_cnt,"right_once", right_once, MOTOR_SPEEDS['q'],MOTOR_SPEEDS['e'])
+
 
 
 if __name__ == "__main__":
