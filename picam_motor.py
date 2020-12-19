@@ -113,7 +113,7 @@ def main():
     motor_key = 115
     #for capture every second
     checktimeBefore = int(time.strftime('%S'))
-
+    cas_cnt = 0
     for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
         # grab the raw NumPy array representing the image, then initialize the timestamp
         # and occupied/unoccupied text
@@ -132,7 +132,9 @@ def main():
         #cascade
         cas = len(cascade(undistorted_image))
         if cas != 0:
-            print(cas)
+            cas_cnt += 1
+            print(cas,cas_cnt)
+
             #motor('s')
 
         #AR marker
@@ -164,7 +166,7 @@ def main():
             if checktime - checktimeBefore >=1:
                 captured(undistorted_image)      
                 checktimeBefore = checktime
-        print(key)
+        #print(key)
         if key == 27:
             break
         elif key == ord("\t"):
