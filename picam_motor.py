@@ -15,8 +15,8 @@ from detect import detect_markers
 GPIO.setmode(GPIO.BCM)
 motor11=23
 motor12=24
-motor21=27
-motor22=17
+motor21=17
+motor22=27
 pwm1=25
 pwm2=22
 

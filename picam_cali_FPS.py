@@ -15,8 +15,8 @@ from detect import detect_markers
 GPIO.setmode(GPIO.BCM)
 motor11=23
 motor12=24
-motor21=27
-motor22=17
+motor21=17
+motor22=27
 pwm1=25
 pwm2=22
 
@@ -34,7 +34,7 @@ p1.start(0)
 p2.start(0)
 
 #left speed
-balance = 0.7
+balance = 1
 
 # ultrasonic init
 GPIO_TRIGGER = 14
@@ -43,8 +43,10 @@ GPIO.setup(GPIO_TRIGGER,GPIO.OUT)
 GPIO.setup(GPIO_ECHO,GPIO.IN)
 GPIO.output(GPIO_TRIGGER, False)
 
-left_motor = (-0.7, 1)
-right_motor= (1, -0.7)
+left_motor = (0, 1)
+right_motor= (1, 0)
+left_motor_marker = (0, 1)
+right_motor_marker = (1, 0)
 
 #motor action init
 MOTOR_SPEEDS = {
@@ -187,8 +189,11 @@ def main():
     ultra_cnt = 0
     cas_switch = 0
     cas_cnt = 0
+    left_once = 0
     right_once = 0
     left_2nd = 0
+    U_turn_switch = 1
+    mode = "start"
 
     for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
         # grab the raw NumPy array representing the image, then initialize the timestamp
@@ -225,10 +230,13 @@ def main():
             motor('a', result[1])
             time.sleep(0.5)
             checktimeBefore = checktime
-            left_2nd = 1
-            MOTOR_SPEEDS['q'] = left_motor
-            MOTOR_SPEEDS['e'] = right_motor
-
+            print("other")
+            if U_turn_switch == 1:
+                left_once = 0
+                left_2nd = 1
+                MOTOR_SPEEDS['q'] = left_motor_marker
+                MOTOR_SPEEDS['e'] = right_motor_marker
+                mode = "U-turn"
         #right Re-try
         #print(result[2])
         if result[2] < 60 and abs(result[1]) < 0.15 and ultra_cnt == 3 and right_once == 0:   
@@ -253,8 +261,9 @@ def main():
                     print(ultra)
                     time.sleep(0.5)
                     checktimeBefore = checktime
-                    MOTOR_SPEEDS['q'] = (0 ,1)
-                    MOTOR_SPEEDS['e'] = (1 ,0)
+                    MOTOR_SPEEDS['q'] = left_motor_marker
+                    MOTOR_SPEEDS['e'] = right_motor_marker
+                    U_turn_switch = 1
 
                 ultra_detect = 1
         
@@ -263,12 +272,16 @@ def main():
                 ultra_cnt += 1
                 if ultra_cnt == 1:
                     ultra_switch = 1
+                    U_turn_switch = 0
+                    mode = "first ultra"
                 elif ultra_cnt == 2:
                     ultra_switch = 0
+                    mode = "first left (ultra)"
                 elif ultra_cnt == 3:
-                    MOTOR_SPEEDS['q'] = (0 ,1)
-                    MOTOR_SPEEDS['e'] = (1 ,0)
-
+                    MOTOR_SPEEDS['q'] = left_motor_marker
+                    MOTOR_SPEEDS['e'] = right_motor_marker
+                    ultra_switch = 0
+                    mode = "third ultra"
 
                 ultra_detect = 0
 
@@ -286,6 +299,7 @@ def main():
                     if cas_cnt == 2:
                         motor('s',result[1])
                         print('stop sign')
+                        mode = "stop sign"
                         ultra_switch = 1
                         ultra_cnt = 2
                         cas_switch = 0
@@ -316,11 +330,12 @@ def main():
                     time.sleep(5)
                     checktimeBefore = checktime
                     right_once = 0
+                    mode = "finish"
             #left
-            if marker.id == 114:
+            if marker.id == 114 and left_once == 0:
                 if distance > 35:
                     motor('w', result[1])
-                    time.sleep(0.8)
+                    time.sleep(0.6)
                     checktimeBefore = checktime
 
                     motor('a',result[1])
@@ -328,13 +343,17 @@ def main():
                     time.sleep(0.5)
                     checktimeBefore = checktime
 
+                    left_once = 1
                     ultra_switch = 0
+                    
                     if left_2nd == 1:
                         cas_switch = 1
+                        mode = "second left"
                     else:
-                        MOTOR_SPEEDS['q'] = (0 ,1)
-                        MOTOR_SPEEDS['e'] = (1 ,0)
-                        
+                        MOTOR_SPEEDS['q'] = left_motor_marker
+                        MOTOR_SPEEDS['e'] = right_motor_marker
+                        U_turn_switch = 1
+                        mode = "first left"
 
             #right
             print(distance)
@@ -345,16 +364,17 @@ def main():
                 else:
                     if distance >= 40 and distance < 55:
                         motor('w', result[1])
-                        time.sleep(0.7)
+                        time.sleep(0.6)
                         checktimeBefore = checktime
                     elif distance >= 55 and distance < 80:
                         motor('w', result[1])
-                        time.sleep(0.3)
+                        time.sleep(0.2)
                         checktimeBefore = checktime
                     
                     elif distance >= 80:
                         motor('x',result[1])
                         time.sleep(0.5)
+                    mode = "right"
                     motor('d',result[1])
                     print('right', marker.id)
                     time.sleep(0.5)
@@ -379,7 +399,8 @@ def main():
         elif key == ord("\t"):
             captured(undistorted_image)
         print("left_2nd",left_2nd, "cas_switch",cas_switch, 
-        "ultra_switch", ultra_switch,"ultra_cnt",ultra_cnt,"right_once", right_once, MOTOR_SPEEDS['q'],MOTOR_SPEEDS['e'])
+        "ultra_switch", ultra_switch,"ultra_cnt",ultra_cnt,"right_once", right_once, 
+        "U_turn_switch", U_turn_switch, MOTOR_SPEEDS['q'],MOTOR_SPEEDS['e'],"mode", mode)
 
 
 
